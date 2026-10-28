@@ -104,6 +104,13 @@
     <button type="submit" class="btn-red shrink-0 rounded-2xl px-5 py-3.5 text-[16px] font-bold sm:px-7">Подобрать</button>
   </form>
 
+  <!-- Запрос не понят -->
+  <section id="hint" class="box mt-6 hidden p-6 sm:p-8">
+    <div class="flex items-center gap-3 text-lg font-bold text-ink"><i data-lucide="message-circle-question" class="h-6 w-6 text-brand"></i>Расскажите о себе чуть подробнее</div>
+    <p class="mt-2 text-[16px] text-mute">Напишите, чем вы занимаетесь и кого ищете — так ИИ поймёт, кого подобрать. Например:</p>
+    <div id="hintChips" class="mt-4 flex flex-wrap gap-2"></div>
+  </section>
+
   <!-- ИИ думает -->
   <section id="thinking" class="box mt-6 hidden p-6 sm:p-8">
     <div class="flex items-center gap-3 text-lg font-bold text-ink"><span class="relative flex h-3 w-3"><span class="absolute inline-flex h-full w-full rounded-full bg-brand animate-ping2"></span><span class="relative inline-flex h-3 w-3 rounded-full bg-brand"></span></span>ИИ подбирает людей</div>
@@ -395,8 +402,34 @@
     document.getElementById("q").value = q;
     try { history.replaceState(null, "", "?q=" + encodeURIComponent(q)); } catch (e) {}
     var me = parse(q);
+    // Не выдумываем подбор: нужны осмысленные слова и узнаваемая профессия или совпадения в базе
+    var understood = stems(q).length > 0 && (me.sphere || rank(me).some(function (x) { return x.s + x.w > 0; }));
+    document.getElementById("hint").classList.add("hidden");
+    if (!understood) { showHint(); return; }
     think(me, function () { show(me); });
   }
+
+  var EXAMPLES = [
+    "Я учитель физики, ищу инженера для кружка робототехники",
+    "Я дизайнер, ищу команду для стартапа",
+    "Я логопед, ищу коррекционный центр",
+    "Я предприниматель, ищу инвестора"
+  ];
+  function showHint() {
+    document.getElementById("thinking").classList.add("hidden");
+    document.getElementById("results").classList.add("hidden");
+    document.getElementById("hintChips").innerHTML = EXAMPLES.map(function (t) {
+      return '<button type="button" data-example class="rounded-full border border-line bg-white px-4 py-2 text-[15px] font-medium text-ink hover:border-brand hover:text-brand">' + esc(t) + "</button>";
+    }).join("");
+    document.getElementById("hint").classList.remove("hidden");
+    setStep(1);
+    lucide.createIcons();
+    document.getElementById("q").focus();
+  }
+  document.getElementById("hintChips").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-example]");
+    if (b) run(b.textContent);
+  });
 
   document.getElementById("qForm").addEventListener("submit", function (e) { e.preventDefault(); run(document.getElementById("q").value || document.getElementById("q").placeholder); });
   document.addEventListener("click", function (e) {
